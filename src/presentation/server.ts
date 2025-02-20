@@ -1,4 +1,6 @@
+import compression from 'compression'
 import express, { Router } from 'express'
+import { IncomingMessage, Server as ServerHttp, ServerResponse } from 'http'
 import path from 'path'
 
 interface Options {
@@ -8,7 +10,11 @@ interface Options {
 }
 
 export class Server {
-  private app = express()
+  public readonly app = express()
+  private serverListener?: ServerHttp<
+    typeof IncomingMessage,
+    typeof ServerResponse
+  >
   private readonly port: number
   private readonly publicPath: string
   private readonly routes: Router
@@ -22,8 +28,9 @@ export class Server {
 
   async start() {
     //* Middlewares
-    this.app.use(express.json()) // raw
+    this.app.use(express.json()) //
     this.app.use(express.urlencoded({ extended: true })) // x-www-form-encoded
+    this.app.use(compression())
 
     //* Public Folder
     this.app.use(express.static(this.publicPath))
@@ -42,8 +49,12 @@ export class Server {
 
     console.log('server running')
 
-    this.app.listen(this.port, () => {
+    this.serverListener = this.app.listen(this.port, () => {
       console.log(`Server running on port ${this.port}`)
     })
+  }
+
+  public close() {
+    this.serverListener?.close()
   }
 }
